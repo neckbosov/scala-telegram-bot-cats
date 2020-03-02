@@ -17,19 +17,55 @@ import scala.collection.mutable
 class BotStarter(override val client: RequestHandler[Future]) extends TelegramBot
   with Polling
   with Commands[Future] {
-  val users: mutable.Set[User] = mutable.Set()
+  val users: mutable.Map[Int, User] = mutable.Map()
+  val messages: mutable.Map[Int, mutable.MutableList[String]] = mutable.Map().withDefaultValue(mutable.MutableList())
   onCommand("/start") { implicit msg =>
     msg.from match {
       case Some(user) => {
-        users.add(user)
+        users += (user.id -> user)
         Future.unit
       }
       case None => Future.unit
     }
   }
+
   onCommand("/users") { implicit msg =>
-    val res = users.mkString
+    val res = users.values.mkString
     reply(res).void
+  }
+
+  onCommand("/send") { implicit msg =>
+    withArgs { args =>
+      try {
+        if (args.isEmpty) throw new IndexOutOfBoundsException()
+        val id = args.head.toInt
+        val s = args.tail
+        if (s.nonEmpty) {
+          messages(id) += s.mkString(" ")
+        }
+        Future.unit
+      } catch {
+        case _: NumberFormatException => reply("Invalid argument. Usage: /send id message").void
+        case _: IndexOutOfBoundsException => reply("Empty argument list. Usage: /send id message").void
+      }
+    }
+  }
+
+  onCommand("/check") { implicit msg =>
+    msg.from.map(_.id) match {
+      case Some(id) => {
+        val res = messages(id)
+        if (res.isEmpty) {
+          reply("I have no new messages for you...").void
+        } else {
+          reply("You new messages:").void
+          res.foreach(reply(_).void)
+          messages -= id
+          Future.unit
+        }
+      }
+      case None => Future.unit
+    }
   }
 }
 
