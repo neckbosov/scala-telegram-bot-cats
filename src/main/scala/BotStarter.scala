@@ -28,9 +28,9 @@ class Service(val apikey: String)(implicit val backend: SttpBackend[Future, Noth
 
   private implicit val serialization: Serialization.type = org.json4s.native.Serialization
 
-  def getRandomCat(): Future[String] = {
+  def getRandomCat: Future[String] = {
     val request = sttp
-      .header("Authorization", apikey)
+      .header("Authorization", s"Client-ID $apikey")
       .get(uri"https://api.imgur.com/3/gallery/search?q=cats")
       .response(asJson[Response])
 
@@ -97,7 +97,7 @@ class BotStarter(override val client: RequestHandler[Future], val catsGetter: Se
   }
 
   onCommand("/cat") { implicit msg =>
-    catsGetter.getRandomCat().flatMap(link => reply(link)).void
+    catsGetter.getRandomCat.flatMap(link => reply(link)).void
   }
 }
 
