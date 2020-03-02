@@ -1,4 +1,3 @@
-import Example.Response
 import cats.instances.future._
 import cats.syntax.functor._
 import com.bot4s.telegram.api.RequestHandler
