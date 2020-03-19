@@ -9,7 +9,7 @@ import scala.concurrent.Future
 class SimpleServer(val imgurService: Service) extends Server {
 
   val usersBase: mutable.Map[Int, User] = mutable.Map()
-  val messagesBase: mutable.Map[Int, mutable.MutableList[String]] = mutable.Map().withDefaultValue(mutable.MutableList())
+  val messagesBase: mutable.Map[Int, mutable.MutableList[String]] = mutable.Map().withDefault(_ => mutable.MutableList.empty)
 
   override def addUser(implicit msg: Message): Unit = msg.from.foreach(user => usersBase += user.id -> user)
 
@@ -27,6 +27,7 @@ class SimpleServer(val imgurService: Service) extends Server {
   override def getRandomCat: Future[String] = imgurService.getRandomCat
 
   override def getNewMessagesTo(id: Int): List[String] = messagesBase(id).toList
+
 
   override def readNewMessagesTo(id: Int): Unit = messagesBase -= id
 }
