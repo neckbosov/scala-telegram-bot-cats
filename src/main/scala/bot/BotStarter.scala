@@ -42,13 +42,13 @@ class BotStarter(override val client: RequestHandler[Future], val server: AsyncS
   onCommand("/check") { implicit msg =>
     msg.from.map(_.id) match {
       case Some(id) =>
-        server.getNewMessagesTo(id).flatMap { res =>
+        server.popNewMessagesTo(id).flatMap { res =>
           if (res.isEmpty) {
             reply("I have no new messages for you...").void
           } else {
             reply("You new messages:").void
             res.foreach(reply(_).void)
-            server.readNewMessagesTo(id)
+            Future.unit
           }
         }
       case None => Future.unit

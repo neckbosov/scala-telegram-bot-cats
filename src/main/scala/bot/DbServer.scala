@@ -70,9 +70,11 @@ class DbServer(val imgurService: Service, val db: Database)(implicit val ec: Exe
 
   override def getRandomCat: Future[String] = imgurService.getRandomCat
 
-  override def getNewMessagesTo(id: Int): Future[List[String]] =
-    db.run(messagesBase.filter(_.userId === id).map(_.text).result).map(_.toList)
-
-  override def readNewMessagesTo(id: Int): Future[Unit] =
-    db.run(messagesBase.filter(_.userId === id).delete).map(_ => ())
+  override def popNewMessagesTo(id: Int): Future[List[String]] = {
+    val transaction = for {
+      res <- messagesBase.filter(_.userId === id).map(_.text).result
+      _ <- messagesBase.filter(_.userId === id).delete
+    } yield res.toList
+    db.run(transaction)
+  }
 }
