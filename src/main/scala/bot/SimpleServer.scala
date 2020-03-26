@@ -6,7 +6,7 @@ import com.bot4s.telegram.models.{Message, User}
 import scala.collection.mutable
 import scala.concurrent.Future
 
-class SimpleServer(val imgurService: Service) extends Server {
+class SimpleServer(implicit val imgurService: Service) extends Server {
 
   val usersBase: mutable.Map[Int, User] = mutable.Map()
   val messagesBase: mutable.Map[Int, mutable.MutableList[String]] = mutable.Map().withDefault(_ => mutable.MutableList.empty)
@@ -20,7 +20,7 @@ class SimpleServer(val imgurService: Service) extends Server {
     val id = args.head.toInt
     val s = args.tail
     if (s.nonEmpty) {
-      messagesBase(id) += s.mkString(" ")
+      messagesBase.getOrElseUpdate(id, mutable.MutableList.empty[String]) += s.mkString(" ")
     }
   }
 
