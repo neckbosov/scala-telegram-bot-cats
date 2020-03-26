@@ -69,7 +69,9 @@ object BotStarter {
     val apiIter = source.getLines()
     val token = apiIter.next()
     val imgurApiKey = apiIter.next()
-    val bot = new BotStarter(new FutureSttpClient(token), new SimpleServer(new ServiceRest(imgurApiKey)))
+    implicit val service = new ServiceRest(imgurApiKey)
+
+    val bot = new BotStarter(new FutureSttpClient(token), new SimpleServer())
     source.close()
     Await.result(bot.run(), Duration.Inf)
   }
