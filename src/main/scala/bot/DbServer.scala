@@ -35,7 +35,7 @@ class Messages(tag: Tag) extends Table[UserMessage](tag, "messages") {
   def * = (messageId.?, userId, text) <> (UserMessage.tupled, UserMessage.unapply)
 }
 
-class DbServer(val imgurService: Service, val db: Database)(implicit val ec: ExecutionContext) extends AsyncServer {
+class DbServer(val db: Database)(implicit val imgurService: Service, implicit val ec: ExecutionContext) extends AsyncServer {
   private val usersBase = TableQuery[Users]
   private val messagesBase = TableQuery[Messages]
 
@@ -48,7 +48,6 @@ class DbServer(val imgurService: Service, val db: Database)(implicit val ec: Exe
   }
 
   override def addUser(implicit msg: Message): Future[Unit] = {
-    println("called addUser")
     msg.from match {
       case Some(user) => db.run(usersBase.insertOrUpdate(user)).map(_ => ())
       case None => Future.unit

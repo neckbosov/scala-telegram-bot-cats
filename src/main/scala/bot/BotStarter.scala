@@ -1,6 +1,6 @@
 package bot
 
-import bot.imgur.ServiceRest
+import bot.imgur.{Service, ServiceRest}
 import cats.instances.future._
 import cats.syntax.functor._
 import com.bot4s.telegram.api.RequestHandler
@@ -72,7 +72,8 @@ object BotStarter {
       val apiIter = source.getLines()
       val token = apiIter.next()
       val imgurApiKey = apiIter.next()
-      val bot = new BotStarter(new FutureSttpClient(token), new DbServer(new ServiceRest(imgurApiKey), db))
+      implicit val service: Service = new ServiceRest(imgurApiKey)
+      val bot = new BotStarter(new FutureSttpClient(token), new DbServer(db))
       Await.result(bot.init, Duration.Inf)
       source.close()
       Await.result(bot.run(), Duration.Inf)
