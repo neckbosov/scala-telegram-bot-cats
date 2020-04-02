@@ -37,6 +37,20 @@ class SimpleServerTest extends AnyFlatSpec with Matchers with MockFactory {
     server.messagesBase(0).mkString("") shouldBe "Alya is cool!!"
   }
 
+  "Server" should "send send a lot of messages" in new mocks {
+    server.sendMessage(List("0", "Alya is cool!!"))
+    server.sendMessage(List("1", "kak dela?"))
+
+    server.messagesBase.size shouldBe 2
+    server.messagesBase(0).mkString("") shouldBe "Alya is cool!!"
+    server.messagesBase(1).mkString("") shouldBe "kak dela?"
+
+
+    server.sendMessage(List("3", "poka ne rodila"))
+    server.messagesBase.size shouldBe 3
+    server.messagesBase(3).mkString("") shouldBe "poka ne rodila"
+  }
+
   "Server" should "return dog, lol " in new mocks {
     (service.getRandomCat _).expects().returning(Future.successful("dog"))
     Await.result(server.getRandomCat, Duration.Inf) shouldBe "dog"
@@ -51,9 +65,43 @@ class SimpleServerTest extends AnyFlatSpec with Matchers with MockFactory {
 
   "Server" should "erase all read messages " in new mocks {
     server.sendMessage(List("0", "scala slozhnaya"))
+    server.sendMessage(List("0", "no interesnaya)0))0))))))00))"))
+
     server.readNewMessagesTo(0)
     server.sendMessage(List("0", "kanikul ne budet((((("))
 
     server.getNewMessagesTo(0) shouldBe List("kanikul ne budet(((((")
   }
+
+
+  "Server" should "erase all read messages 2" in new mocks {
+    server.getNewMessagesTo(0) shouldBe List()
+    server.getNewMessagesTo(1) shouldBe List()
+    server.getNewMessagesTo(2) shouldBe List()
+
+    server.sendMessage(List("0", "niht"))
+    server.sendMessage(List("0", "dja"))
+    server.sendMessage(List("1", "da"))
+    server.sendMessage(List("1", "net"))
+    server.sendMessage(List("2", "oui"))
+    server.sendMessage(List("2", "non"))
+
+    server.getNewMessagesTo(0) shouldBe List("niht", "dja")
+    server.getNewMessagesTo(1) shouldBe List("da", "net")
+    server.getNewMessagesTo(2) shouldBe List("oui", "non")
+
+    server.readNewMessagesTo(0)
+
+    server.getNewMessagesTo(0) shouldBe List()
+    server.getNewMessagesTo(1) shouldBe List("da", "net")
+    server.getNewMessagesTo(2) shouldBe List("oui", "non")
+
+    server.readNewMessagesTo(1)
+    server.readNewMessagesTo(2)
+
+    server.getNewMessagesTo(0) shouldBe List()
+    server.getNewMessagesTo(1) shouldBe List()
+    server.getNewMessagesTo(2) shouldBe List()
+  }
+
 }
