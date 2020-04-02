@@ -58,6 +58,16 @@ class BotStarter(override val client: RequestHandler[Future], val server: AsyncS
   onCommand("/cat") { implicit msg =>
     server.getRandomCat.flatMap(link => reply(link)).void
   }
+
+  onCommand("/stats") { implicit msg =>
+    withArgs { args =>
+      val idOrLogin = args.headOption.orElse(msg.from.map(_.firstName))
+      idOrLogin match {
+        case Some(id) => server.getStats(id).flatMap(res => reply(res.getOrElse("There is user with suck id or login")).void)
+        case None => reply("User not specified").void
+      }
+    }
+  }
 }
 
 object BotStarter {

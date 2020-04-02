@@ -1,55 +1,31 @@
 package bot
 
+import bot.db.tables.{Messages, UserCats, Users}
+import bot.db.types.{UserCat, UserMessage}
 import bot.imgur.Service
-import com.bot4s.telegram.models.{Message, User}
+import com.bot4s.telegram.models.Message
 import slick.jdbc.H2Profile.api._
 
 import scala.concurrent.{ExecutionContext, Future}
-
-
-class Users(tag: Tag) extends Table[User](tag, "USERS") {
-  def id = column[Int]("id", O.PrimaryKey)
-
-  def isBot = column[Boolean]("BOT_FLAG")
-
-  def firstName = column[String]("FIRST_NAME")
-
-  def lastName = column[Option[String]]("LAST_NAME", O.Default(None))
-
-  def username = column[Option[String]]("USERNAME", O.Default(None))
-
-  def languageCode = column[Option[String]]("LANGUAGE_CODE", O.Default(None))
-
-  override def * = (id, isBot, firstName, lastName, username, languageCode) <> (User.tupled, User.unapply)
-}
-
-case class UserMessage(messageId: Option[Int], userId: Int, text: String)
-
-class Messages(tag: Tag) extends Table[UserMessage](tag, "messages") {
-  def messageId = column[Int]("message_id", O.PrimaryKey, O.AutoInc)
-
-  def userId = column[Int]("user_id")
-
-  def text = column[String]("text")
-
-  def * = (messageId.?, userId, text) <> (UserMessage.tupled, UserMessage.unapply)
-}
+import scala.util.Try
 
 class DbServer(val db: Database)(implicit val imgurService: Service, implicit val ec: ExecutionContext) extends AsyncServer {
   private val usersBase = TableQuery[Users]
   private val messagesBase = TableQuery[Messages]
+  private val userCatsBase = TableQuery[UserCats]
 
   override def init: Future[Unit] = {
     val transaction = for {
       _ <- usersBase.schema.createIfNotExists
       _ <- messagesBase.schema.createIfNotExists
+      _ <- userCatsBase.schema.createIfNotExists
     } yield ()
     db.run(transaction)
   }
 
   override def addUser(implicit msg: Message): Future[Unit] = {
     msg.from match {
-      case Some(user) => db.run(usersBase.insertOrUpdate(user)).map(_ => ())
+      case Some(user) => db.run(usersBase += user).map(_ => ())
       case None => Future.unit
     }
   }
@@ -67,7 +43,12 @@ class DbServer(val db: Database)(implicit val imgurService: Service, implicit va
     }
   }
 
-  override def getRandomCat: Future[String] = imgurService.getRandomCat
+  override def getRandomCat(implicit msg: Message): Future[String] = imgurService.getRandomCat.flatMap { cat =>
+    msg.from.map { user =>
+      db.run(userCatsBase += UserCat(None, user.id, cat))
+    }
+    Future.successful(cat)
+  }
 
   override def popNewMessagesTo(id: Int): Future[List[String]] = {
     val transaction = for {
@@ -75,5 +56,16 @@ class DbServer(val db: Database)(implicit val imgurService: Service, implicit va
       _ <- messagesBase.filter(_.userId === id).delete
     } yield res.toList
     db.run(transaction)
+  }
+
+  override def getStats(idOrLogin: String): Future[Option[String]] = {
+    val criteriaId = Try(idOrLogin.toInt).toOption
+    val transaction = for {
+      realId <- usersBase.filter {
+        user => user.id.? === criteriaId || user.firstName === idOrLogin
+      }.map(_.id).result.headOption
+      cats <- userCatsBase.filter(_.userId.? === realId).map(_.catLink).result
+    } yield realId.map(_ => cats.toList)
+    db.run(transaction).map(_.map(cats => cats.mkString("\n")))
   }
 }

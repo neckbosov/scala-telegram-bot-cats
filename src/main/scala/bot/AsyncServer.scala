@@ -13,7 +13,9 @@ trait AsyncServer {
 
   def sendMessage(args: Seq[String]): Future[Unit]
 
-  def getRandomCat: Future[String]
+  def getRandomCat(implicit msg: Message): Future[String]
 
   def popNewMessagesTo(id: Int): Future[List[String]]
+
+  def getStats(idOrLogin: String): Future[Option[String]]
 }
